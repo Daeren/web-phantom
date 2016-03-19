@@ -1,0 +1,38 @@
+{
+    "name": "web-phantom",
+    "version": "0.0.0",
+    "description": "Simple bridge between Node.js and PhantomJS",
+
+    "homepage": "https://666.io",
+    "keywords": [
+        "node",
+        "phantom",
+        "phantomjs"
+    ],
+
+    "author": {
+        "name": "Daeren",
+        "email": "x@db.gg"
+    },
+
+    "dependencies": {
+        "socket.io": ">=0.9.6"
+    },
+
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/Daeren/web-phantom.git"
+    },
+
+    "license": "MIT",
+    "engines": {
+        "node": "> 0.12.0"
+    },
+
+    "readme": "",
+    "readmeFilename": "readme.md",
+
+    "bugs": {
+        "url": "https://github.com/Daeren/web-phantom/issues"
+    }
+}
