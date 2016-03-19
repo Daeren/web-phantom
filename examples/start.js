@@ -21,10 +21,13 @@ rCo(function* () {
     const status = yield page.open("https://db.gg");
 
     console.log("Page: %s", status);
+
+    yield page.close();
+    yield ph.exit();
 }).catch(console.error);
 
 /*
-rWebPhantom(function(error, ph) {
+rWebPhantom({"log": 1}, function(error, ph) {
     console.log("createPage");
 
     ph.createPage(function(error, page) {

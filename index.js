@@ -78,6 +78,11 @@ function main(params, callback) {
 
                 //--------------]>
 
+                phantomProc.on("error", onPhantomError);
+                phantomProc.on("exit", onPhantomExit);
+
+                //--------------]>
+
                 socketIo.on("connection", function(socket) {
                     socket.on("notification", function(request) {
                         const pageId    = request[0],
@@ -163,7 +168,6 @@ function main(params, callback) {
                                 sendCommand([0, "exitAck"]);
 
                                 server.close();
-                                socketIo.set("client store expiration", 0);
 
                                 onEndClientEvent(null);
 
@@ -231,67 +235,58 @@ function main(params, callback) {
 
                     //--------------]>
 
-                    phantomProc.on("error", function(error) {
-                        server.close();
-                        throw error;
-                    });
+                    if(params.log) {
+                        phantomProc.stdout.on("data", function(data) {
+                            console.log("Phantom stdout: %s", data);
+                        });
 
-                    phantomProc.on("exit", function(code) {
-                        server.close();
-                        throw new Error("Phantom crash | code: %s", code);
-                    });
-
-                    //---)>
-
-                    phantomProc.stdout.on("data", function(data) {
-                        console.log("Phantom stdout: %s", data);
-                    });
-
-                    phantomProc.stderr.on("data", function(data) {
-                        console.log("Phantom stderr: %s", data);
-                    });
+                        phantomProc.stderr.on("data", function(data) {
+                            console.log("Phantom stderr: %s", data);
+                        });
+                    }
 
                     //--------------]>
 
                     (function() {
-                        const proxy = {
-                            createPage(url, callback) {
-                                return sendCommand([0, "createPage"], callback);
-                            },
-
-                            injectJs(filename, callback) {
-                                return sendCommand([0, "injectJs", filename], callback);
-                            },
-
-                            addCookie(cookie, callback) {
-                                return sendCommand([0, "addCookie", cookie], callback);
-                            },
-
-                            exit(callback) {
-                                //phantom.removeListener("exit", prematureExitHandler); //an exit is no longer premature now
-                                return sendCommand([0, "exit"], callback);
-                            },
-
-                            on() {
-                                phantomProc.on.apply(phantomProc, arguments);
-                            }
-                        };
-
                         let count = 5;
 
                         const tmCheckPhantom = setInterval(function() {
                             if(!count) {
                                 server.close();
-                                callback(new Error("Timeout: the phantom failed to connect."), proxy);
+                                callback(new Error("Timeout: the phantom failed to connect."));
                             }
 
                             if(phantomConnected) {
                                 clearInterval(tmCheckPhantom);
-                                callback(null, proxy);
+                                callback(null, createProxy());
                             }
 
                             count--;
                         }, 1000);
+
+                        function createProxy() {
+                            const proxy = {
+                                createPage(callback) {
+                                    return sendCommand([0, "createPage"], callback);
+                                },
+
+                                injectJs(filename, callback) {
+                                    return sendCommand([0, "injectJs", filename], callback);
+                                },
+
+                                addCookie(cookie, callback) {
+                                    return sendCommand([0, "addCookie", cookie], callback);
+                                },
+
+                                exit(callback) {
+                                    phantomProc.removeListener("exit", onPhantomExit); //an exit is no longer premature now
+
+                                    return sendCommand([0, "exit"], callback);
+                                }
+                            };
+
+                            return Object.assign(Object.create(phantomProc), proxy);
+                        }
                     })();
 
                     //--------------]>
@@ -319,8 +314,19 @@ function main(params, callback) {
                         }
                     }
                 });
-            });
 
+                //--------------]>
+
+                function onPhantomError(error) {
+                    server.close();
+                    throw error;
+                }
+
+                function onPhantomExit(code) {
+                    server.close();
+                    throw new Error("Phantom crash | code: %s", code);
+                }
+            });
     }
 }
 
