@@ -27,7 +27,9 @@ rCo(function* () {
 }).catch(console.error);
 
 /*
-rWebPhantom({"log": 1}, function(error, ph) {
+ const params = {"log": true, "args": {}};
+
+rWebPhantom(params, function(error, ph) {
     console.log("createPage");
 
     ph.createPage(function(error, page) {
