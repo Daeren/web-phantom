@@ -15,12 +15,14 @@ const rWebPhantom   = require("./../index"),
 //-----------------------------------------------------
 
 rCo(function* () {
-    const ph = yield rWebPhantom();
+    const ph        = yield rWebPhantom();
 
-    const page = yield ph.createPage();
-    const status = yield page.open("https://db.gg");
+    const page      = yield ph.createPage();
 
-    console.log("Page: %s", status);
+    const status    = yield page.open("https://db.gg"),
+          content   = yield page.content();
+
+    console.log("Page (%s):\n\n%s", status, content);
 
     yield page.close();
     yield ph.exit();

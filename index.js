@@ -16,6 +16,8 @@ const rSocketIo         = require("socket.io");
 
 //-----------------------------------------------------
 
+const C_SYS_PAGE_ID = 0;
+
 const gClientJs = '<html><head><script src="/socket.io/socket.io.js"></script><script>\n\
                 window.onload = function(){\n\
                     (window.socket = new io()).on("packet", function(t){alert(t);});\n\
@@ -112,59 +114,12 @@ function main(params, callback) {
                         //-------]>
 
                         switch(event) {
-                            case "pageCreated":
-                                const pageProxy = {
-                                    open(url, callback) {
-                                        return sendCommand([pageId, "pageOpenWithCallback", url], callback);
-                                    },
-                                    close(callback) {
-                                        return sendCommand([pageId, "pageClose"], callback);
-                                    },
-                                    render(filename, callback) {
-                                        return sendCommand([pageId, "pageRender", filename], callback);
-                                    },
-                                    renderBase64(extension, callback) {
-                                        return sendCommand([pageId, "pageRenderBase64", extension], callback);
-                                    },
-                                    injectJs(url, callback) {
-                                        return sendCommand([pageId, "pageInjectJs", url], callback);
-                                    },
-                                    includeJs(url, callback) {
-                                        return sendCommand([pageId, "pageIncludeJs", url], callback);
-                                    },
-                                    sendEvent(event, x, y, callback) {
-                                        return sendCommand([pageId, "pageSendEvent", event, x, y], callback);
-                                    },
-                                    uploadFile(selector, filename, callback) {
-                                        return sendCommand([pageId, "pageUploadFile", selector, filename], callback);
-                                    },
-                                    evaluate(evaluator, callback) {
-                                        return sendCommand([pageId, "pageEvaluate", [evaluator.toString()].concat(Array.prototype.slice.call(arguments, 2))], callback);
-                                    },
-                                    evaluateAsync(evaluator, callback) {
-                                        return sendCommand([pageId, "pageEvaluateAsync", [evaluator.toString()].concat(Array.prototype.slice.call(arguments, 2))], callback);
-                                    },
-                                    set(name, value, callback) {
-                                        return sendCommand([pageId, "pageSet", name, value], callback);
-                                    },
-                                    get(name, callback) {
-                                        return sendCommand([pageId, "pageGet", name], callback);
-                                    },
-                                    setFn(pageCallbackName, fn, callback) {
-                                        return sendCommand([pageId, "pageSetFn", pageCallbackName, fn.toString()], callback);
-                                    },
-                                    setViewport(viewport, callback) {
-                                        return sendCommand([pageId, "pageSetViewport", viewport.width, viewport.height], callback);
-                                    }
-                                };
-
-                                pages[pageId] = pageProxy;
-
-                                onEndClientEvent(null, pageProxy);
+                            case "createPage":
+                                onEndClientEvent(null, pages[pageId] = createPageProxy(pageId));
 
                                 break;
 
-                            case "phantomExited":
+                            case "exit":
                                 sendCommand([0, "exitAck"]);
 
                                 server.close();
@@ -173,45 +128,44 @@ function main(params, callback) {
 
                                 break;
 
-                            case "pageJsInjected":
-                            case "jsInjected":
+                            //---)>
+
+                            case "open":
+                            case "content":
+                            case "renderBase64":
+                                onEndClientEvent(null, data);
+
+                                break;
+
+                            case "injectJs":
                                 onEndClientEvent(JSON.parse(data) === true ? null : true);
 
                                 break;
 
-                            case "pageOpened":
-                                onEndClientEvent(null, data);
-
-                                break;
-
-                            case "pageRenderBase64Done":
-                                onEndClientEvent(null, data);
-
-                                break;
-
-                            case "pageGetDone":
-                            case "pageEvaluated":
+                            case "evaluate":
                                 onEndClientEvent(null, JSON.parse(data));
 
                                 break;
 
-                            case "pageClosed":
+                            //---)>
+
+                            case "close":
                                 delete pages[pageId];
 
-                            case "pageSetDone":
-                            case "pageJsIncluded":
                             case "cookieAdded":
-                            case "pageRendered":
-                            case "pageEventSent":
-                            case "pageFileUploaded":
-                            case "pageSetViewportDone":
-                            case "pageEvaluatedAsync":
+                            case "render":
+                            case "includeJs":
+                            case "sendEvent":
+                            case "uploadFile":
+                            case "evaluateAsync":
+
+                            case "viewportSize":
                                 onEndClientEvent(null);
 
                                 break;
 
                             default:
-                                console.error("got unrecognized response:" + response);
+                                console.error("Unrecognized response: %s", response);
 
                                 break;
                         }
@@ -248,48 +202,93 @@ function main(params, callback) {
                     //--------------]>
 
                     (function() {
+                        const tmCheckPhantom = setInterval(onPhantomCheck, 1000);
+
                         let count = 5;
 
-                        const tmCheckPhantom = setInterval(function() {
-                            if(!count) {
+                        function onPhantomCheck() {
+                            if(phantomConnected) {
+                                clearInterval(tmCheckPhantom);
+                                callback(null, Object.assign(Object.create(phantomProc), createPhantomProxy()));
+                            }
+                            else if(!count) {
                                 server.close();
                                 callback(new Error("Timeout: the phantom failed to connect."));
                             }
 
-                            if(phantomConnected) {
-                                clearInterval(tmCheckPhantom);
-                                callback(null, createProxy());
-                            }
-
                             count--;
-                        }, 1000);
-
-                        function createProxy() {
-                            const proxy = {
-                                createPage(callback) {
-                                    return sendCommand([0, "createPage"], callback);
-                                },
-
-                                injectJs(filename, callback) {
-                                    return sendCommand([0, "injectJs", filename], callback);
-                                },
-
-                                addCookie(cookie, callback) {
-                                    return sendCommand([0, "addCookie", cookie], callback);
-                                },
-
-                                exit(callback) {
-                                    phantomProc.removeListener("exit", onPhantomExit); //an exit is no longer premature now
-
-                                    return sendCommand([0, "exit"], callback);
-                                }
-                            };
-
-                            return Object.assign(Object.create(phantomProc), proxy);
                         }
                     })();
 
                     //--------------]>
+
+                    function createPhantomProxy() {
+                        return {
+                            createPage(callback) {
+                                return sendCommand([C_SYS_PAGE_ID, "createPage"], callback);
+                            },
+
+                            injectJs(filename, callback) {
+                                return sendCommand([C_SYS_PAGE_ID, "injectJs", filename], callback);
+                            },
+
+                            addCookie(cookie, callback) {
+                                return sendCommand([C_SYS_PAGE_ID, "addCookie", cookie], callback);
+                            },
+
+                            exit(callback) {
+                                phantomProc.removeListener("exit", onPhantomExit); //an exit is no longer premature now
+
+                                return sendCommand([C_SYS_PAGE_ID, "exit"], callback);
+                            }
+                        };
+                    }
+
+                    function createPageProxy(pageId) {
+                        return {
+                            open(url, callback) {
+                                return sendCommand([pageId, "open", url], callback);
+                            },
+                            close(callback) {
+                                return sendCommand([pageId, "close"], callback);
+                            },
+
+                            render(filename, callback) {
+                                return sendCommand([pageId, "render", filename], callback);
+                            },
+                            renderBase64(extension, callback) {
+                                return sendCommand([pageId, "renderBase64", extension], callback);
+                            },
+
+                            injectJs(url, callback) {
+                                return sendCommand([pageId, "injectJs", url], callback);
+                            },
+                            includeJs(url, callback) {
+                                return sendCommand([pageId, "includeJs", url], callback);
+                            },
+
+                            sendEvent(event, x, y, callback) {
+                                return sendCommand([pageId, "sendEvent", event, x, y], callback);
+                            },
+                            uploadFile(selector, filename, callback) {
+                                return sendCommand([pageId, "uploadFile", selector, filename], callback);
+                            },
+
+                            evaluate(evaluator, callback) {
+                                return sendCommand([pageId, "evaluate", [evaluator.toString()].concat(Array.prototype.slice.call(arguments, 2))], callback);
+                            },
+                            evaluateAsync(evaluator, callback) {
+                                return sendCommand([pageId, "evaluateAsync", [evaluator.toString()].concat(Array.prototype.slice.call(arguments, 2))], callback);
+                            },
+
+                            viewportSize(viewport, callback) {
+                                return sendCommand([pageId, "viewportSize", viewport.width, viewport.height], callback);
+                            },
+                            content(callback) {
+                                return sendCommand([pageId, "content"], callback);
+                            }
+                        };
+                    }
 
                     function sendCommand(args, callback) {
                         const packet    = [cmdId, args],

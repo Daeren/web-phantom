@@ -15,12 +15,14 @@ var rSystem           = require("system"),
 
 //-----------------------------------------------------
 
-var gArgs     = rSystem.args,
-    gPort     = gArgs[1];
+var C_SYS_PAGE_ID   = 0;
 
-var gPage     = rWebPage.create();
+var gArgs           = rSystem.args,
+    gPort           = gArgs[1];
 
-var gPages    = {};
+var gPage           = rWebPage.create();
+
+var gPages          = {};
 
 //-----------------------------------------------------
 
@@ -47,7 +49,7 @@ gPage.onAlert = function onAlert(packet) {
 
     //------------]>
 
-    if(!pageId) {
+    if(pageId === C_SYS_PAGE_ID) {
         switch(event) {
             case "createPage":
                 var newPageId     = pageId + 1,
@@ -56,7 +58,7 @@ gPage.onAlert = function onAlert(packet) {
                 gPages[newPageId] = newPage;
 
                 bindNotifications(newPageId, newPage);
-                sendPacket([newPageId, "pageCreated"]);
+                sendPacket([newPageId, "createPage"]);
 
                 break;
 
@@ -64,7 +66,7 @@ gPage.onAlert = function onAlert(packet) {
                 var filename  = payload[2];
                 var result    = phantom.injectJs(filename);
 
-                sendPacket([0, "jsInjected", result]);
+                sendPacket([C_SYS_PAGE_ID, "injectJs", result]);
 
                 break;
 
@@ -72,12 +74,12 @@ gPage.onAlert = function onAlert(packet) {
                 var filename  = payload[2];
                 var result    = phantom.addCookie(filename);
 
-                sendPacket([0, "cookieAdded", result]);
+                sendPacket([C_SYS_PAGE_ID, "addCookie", result]);
 
                 break;
 
             case "exit":
-                sendPacket([0, "phantomExited"]); //optimistically to get the response back before the line is cut
+                sendPacket([C_SYS_PAGE_ID, "exit"]); //optimistically to get the response back before the line is cut
 
                 break;
 
@@ -100,138 +102,123 @@ gPage.onAlert = function onAlert(packet) {
     var page = gPages[pageId];
 
     switch(event) {
-        case "pageOpen":
-            var url = payload[2];
-
-            page.open(url);
-
-            break;
-
-        case "pageOpenWithCallback":
+        case "open":
             var url = payload[2];
 
             page.open(url, function(status) {
-                sendPacket([pageId, "pageOpened", status]);
+                sendPacket([pageId, "open", status]);
             });
 
             break;
 
-        case "pageClose":
+        case "close":
             page.close();
-            sendPacket([pageId, "pageClosed"]);
+            sendPacket([pageId, "close"]);
 
             break;
 
-        case "pageInjectJs":
+        //---)>
+
+        case "render":
+            var filename = payload[2];
+
+            page.render(filename);
+            sendPacket([pageId, "render"]);
+
+            break;
+
+        case "renderBase64":
+            var extension = payload[2];
+            var result    = page.renderBase64(extension);
+
+            sendPacket([pageId, "renderBase64",  result]);
+
+            break;
+
+        //---)>
+
+        case "injectJs":
             var url       = payload[2];
             var result    = page.injectJs(url);
 
-            sendPacket([pageId, "pageJsInjected", JSON.stringify(result)]);
+            sendPacket([pageId, "injectJs", JSON.stringify(result)]);
 
             break;
 
-        case "pageIncludeJs":
+        case "includeJs":
             var url       = payload[2];
 
             var already     = false;
 
             page.includeJs(url, function() {
                 if(!already) {
-                    sendPacket([pageId, "pageJsIncluded"]);
+                    sendPacket([pageId, "includeJs"]);
                     already = true;
                 }
             });
 
             break;
 
-        case "pageSendEvent":
+        //---)>
+
+        case "sendEvent":
             var event = payload[2],
                 x     = payload[3],
                 y     = payload[4];
 
             page.sendEvent(event, x, y);
-            sendPacket([pageId, "pageEventSent"]);
+            sendPacket([pageId, "sendEvent"]);
 
             break;
 
-        case "pageUploadFile":
+        case "uploadFile":
             var selector = payload[2],
                 filename = payload[3];
 
             page.uploadFile(selector, filename);
-            sendPacket([pageId, "pageFileUploaded"]);
+            sendPacket([pageId, "uploadFile"]);
 
             break;
 
-        case "pageEvaluate":
+        //---)>
+
+        case "evaluate":
             var args      = payload[2];
             var result    = gPage.evaluate.apply(gPage, args);
 
-            sendPacket([pageId, "pageEvaluated", JSON.stringify(result)]);
+            sendPacket([pageId, "evaluate", JSON.stringify(result)]);
 
             break;
 
-        case "pageEvaluateAsync":
+        case "evaluateAsync":
             var args = payload[2];
 
             gPage.evaluateAsync.apply(gPage, args);
-            sendPacket([pageId, "pageEvaluatedAsync"]);
+            sendPacket([pageId, "evaluateAsync"]);
 
             break;
 
-        case "pageRender":
-            var filename = payload[2];
+        //---)>
 
-            page.render(filename);
-            sendPacket([pageId, "pageRendered"]);
-
-            break;
-
-        case "pageRenderBase64":
-            var extension = payload[2];
-            var result    = page.renderBase64(extension);
-
-            sendPacket([pageId, "pageRenderBase64Done",  result]);
-
-            break;
-
-        case "pageSet":
-            var name  = payload[2],
-                value = payload[3];
-
-            page[name] = value;
-            sendPacket([pageId, "pageSetDone"]);
-
-            break;
-
-        case "pageGet":
-            var name      = payload[2];
-            var result    = page[name];
-
-            sendPacket([pageId, "pageGetDone", JSON.stringify(result)]);
-
-            break;
-
-        case "pageSetFn":
-            var pageCallbackName  = payload[2],
-                fn                = payload[3];
-
-            page[pageCallbackName] = eval("(" + fn + ")");
-
-            break;
-
-        case "pageSetViewport":
+        case "viewportSize":
             var viewportW = payload[2],
                 viewportH = payload[3];
 
             page.viewportSize = {"width": viewportW, "height": viewportH};
 
-            sendPacket([pageId, "pageSetViewportDone"]);
+            sendPacket([pageId, "viewportSize"]);
 
             break;
 
+        case "content":
+            sendPacket([pageId, "content", page.content]);
+
+            break;
+
+        //---)>
+
         default:
-            console.error("unrecognized request:" + request);
+            console.error("Unrecognized request: %s", request);
 
             break;
     }
