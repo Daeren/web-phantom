@@ -22,8 +22,13 @@ rCo(function* () {
 ```
 
 
-* Download [PhantomJS][3] (2.x)
+1. Download [PhantomJS][3] (2.x)
+2. Run PhantomJS in the console: "> phantomjs -v"
+3. Run node.js applications
+
+
 * API [PhantomJS][4]
+* Command-line [PhantomJS][5]
 
 
 ## License
@@ -40,3 +45,4 @@ MIT
 
 [3]: http://phantomjs.org
 [4]: http://phantomjs.org/api/webpage/
+[5]: http://phantomjs.org/api/command-line.html

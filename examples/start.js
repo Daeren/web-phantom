@@ -14,13 +14,20 @@ const rWebPhantom   = require("./../index"),
 
 //-----------------------------------------------------
 
+global.sleep = t => new Promise(r => setTimeout(r, t));
+
+//-----------------------------------------------------
+
 rCo(function* () {
     const ph        = yield rWebPhantom();
-
     const page      = yield ph.createPage();
 
-    const status    = yield page.open("https://db.gg"),
-          content   = yield page.content();
+    const status    = yield page.open("https://666.io");
+    const content   = yield page.content();
+
+    yield sleep(1000*10);
+
+    page.render("test.png");
 
     console.log("Page (%s):\n\n%s", status, content);
 
@@ -28,8 +35,39 @@ rCo(function* () {
     yield ph.exit();
 }).catch(console.error);
 
+
+
 /*
- const params = {"log": true, "args": {}};
+rCo(function* () {
+    const params = {
+        "log":  true,
+        "args": {
+            "cookies-file": "./cookies.txt",
+            "load-images":  false,
+            "proxy":        "94.205.81.171:80"
+        }
+    };
+
+    const ph        = yield rWebPhantom(params);
+    const page      = yield ph.createPage();
+
+    const status    = yield page.open("https://db.gg");
+
+    yield sleep(1000 * 5);
+
+    const content   = yield page.content();
+
+    console.log("Page (%s):\n\n%s", status, content);
+
+    yield page.close();
+    yield ph.exit();
+}).catch(console.error);
+*/
+
+
+
+/*
+const params = {"log": true, "args": {}};
 
 rWebPhantom(params, function(error, ph) {
     console.log("createPage");
@@ -43,3 +81,6 @@ rWebPhantom(params, function(error, ph) {
     });
 });
 */
+
+//
+// http://checkip.amazonaws.com/
