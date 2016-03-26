@@ -27,6 +27,8 @@ rCo(function* () {
 3. Run node.js applications
 
 
+### Doc
+
 * API [PhantomJS][4]
 * Command-line [PhantomJS][5]
 
