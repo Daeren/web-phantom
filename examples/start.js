@@ -23,11 +23,12 @@ rCo(function* () {
     const page      = yield ph.createPage();
 
     const status    = yield page.open("https://666.io");
+
+    yield sleep(1000 * 2);
+
     const content   = yield page.content();
 
-    yield sleep(1000*10);
-
-    page.render("test.png");
+    yield page.render("test.png");
 
     console.log("Page (%s):\n\n%s", status, content);
 
@@ -82,5 +83,5 @@ rWebPhantom(params, function(error, ph) {
 });
 */
 
-//
+
 // http://checkip.amazonaws.com/

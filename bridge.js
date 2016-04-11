@@ -184,7 +184,7 @@ gPage.onAlert = function onAlert(packet) {
 
         case "evaluate":
             var args      = payload[2];
-            var result    = gPage.evaluate.apply(gPage, args);
+            var result    = page.evaluate.apply(page, args);
 
             sendPacket([pageId, "evaluate", JSON.stringify(result)]);
 
@@ -193,7 +193,7 @@ gPage.onAlert = function onAlert(packet) {
         case "evaluateAsync":
             var args = payload[2];
 
-            gPage.evaluateAsync.apply(gPage, args);
+            page.evaluateAsync.apply(page, args);
             sendPacket([pageId, "evaluateAsync"]);
 
             break;
@@ -211,7 +211,14 @@ gPage.onAlert = function onAlert(packet) {
             break;
 
         case "content":
-            sendPacket([pageId, "content", page.content]);
+        case "cookies":
+            var data = payload[2];
+
+            if(typeof(data) !== "undefined" && data !== null) {
+                page[event] = data;
+            }
+
+            sendPacket([pageId, event, page[event]]);
 
             break;
 

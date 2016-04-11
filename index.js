@@ -132,6 +132,7 @@ function main(params, callback) {
 
                             case "open":
                             case "content":
+                            case "cookies":
                             case "renderBase64":
                                 onEndClientEvent(null, data);
 
@@ -284,8 +285,11 @@ function main(params, callback) {
                             viewportSize(viewport, callback) {
                                 return sendCommand([pageId, "viewportSize", viewport.width, viewport.height], callback);
                             },
-                            content(callback) {
-                                return sendCommand([pageId, "content"], callback);
+                            content(data, callback) {
+                                return sendCommand([pageId, "content", data], callback);
+                            },
+                            cookies(data, callback) {
+                                return sendCommand([pageId, "cookies", data], callback);
                             }
                         };
                     }
