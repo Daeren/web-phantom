@@ -36,7 +36,7 @@ function main(params, callback) {
         params = null;
     }
 
-    params          = params || {};
+    params          = params ? Object.create(params) : {};
     params.path     = params.path || "phantomjs";
     params.host     = params.host || "localhost";
     params.args     = params.args || {};
@@ -70,18 +70,14 @@ function main(params, callback) {
             .listen(params.port, params.host, function() {
                 const srvPort       = server.address().port;
 
-                const socketIo      = rSocketIo(server),
-                      phantomProc   = spawnPhantom(params, srvPort);
+                const socketIo      = rSocketIo(server);
 
                 const pages         = {},
                       commands      = {};
 
                 let cmdId           = 0;
 
-                //--------------]>
-
-                phantomProc.on("error", onPhantomError);
-                phantomProc.on("exit", onPhantomExit);
+                let phantomProc    = runPhantom(params);
 
                 //--------------]>
 
@@ -191,13 +187,8 @@ function main(params, callback) {
                     //--------------]>
 
                     if(params.log) {
-                        phantomProc.stdout.on("data", function(data) {
-                            console.log("Phantom stdout: %s", data);
-                        });
-
-                        phantomProc.stderr.on("data", function(data) {
-                            console.log("Phantom stderr: %s", data);
-                        });
+                        phantomProc.stdout.on("data", onPhantomStdout);
+                        phantomProc.stderr.on("data", onPhantomStderr);
                     }
 
                     //--------------]>
@@ -238,8 +229,6 @@ function main(params, callback) {
                             },
 
                             exit(callback) {
-                                phantomProc.removeListener("exit", onPhantomExit); //an exit is no longer premature now
-
                                 return sendCommand([C_SYS_PAGE_ID, "exit"], callback);
                             }
                         };
@@ -320,14 +309,47 @@ function main(params, callback) {
 
                 //--------------]>
 
+                function runPhantom(p) {
+                    const ph = spawnPhantom(p, srvPort);
+
+                    ph.on("error", onPhantomError);
+                    ph.on("exit", onPhantomExit);
+
+                    return ph;
+                }
+
+                function onPhantomStdout(data) {
+                    console.log("Phantom stdout: %s", data);
+                }
+
+                function onPhantomStderr(data) {
+                    console.log("Phantom stderr: %s", data);
+                }
+
                 function onPhantomError(error) {
+                    onPhantomRelease();
                     server.close();
+
                     throw error;
                 }
 
                 function onPhantomExit(code) {
+                    if(code === 0) {
+                        return;
+                    }
+
+                    onPhantomRelease();
                     server.close();
+
                     throw new Error("Phantom crash | code: %s", code);
+                }
+
+                function onPhantomRelease() {
+                    phantomProc.stdout.removeListener("data", onPhantomStdout);
+                    phantomProc.stderr.removeListener("data", onPhantomStderr);
+
+                    phantomProc.removeListener("error", onPhantomError);
+                    phantomProc.removeListener("exit", onPhantomExit);
                 }
             });
     }
@@ -338,6 +360,8 @@ function main(params, callback) {
 function spawnPhantom(params, port){
     const options   = params.args;
     const args      = [];
+
+    //----------]>
 
     for(let name in options) {
         args.push("--" + name + "=" + options[name]);
