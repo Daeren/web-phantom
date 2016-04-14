@@ -70,14 +70,13 @@ function main(params, callback) {
             .listen(params.port, params.host, function() {
                 const srvPort       = server.address().port;
 
-                const socketIo      = rSocketIo(server);
+                const socketIo      = rSocketIo(server),
+                      phantomProc   = runPhantom(params);
 
                 const pages         = {},
                       commands      = {};
 
                 let cmdId           = 0;
-
-                let phantomProc    = runPhantom(params);
 
                 //--------------]>
 
@@ -317,6 +316,8 @@ function main(params, callback) {
 
                     return ph;
                 }
+
+                //-----]>
 
                 function onPhantomStdout(data) {
                     console.log("Phantom stdout: %s", data);
