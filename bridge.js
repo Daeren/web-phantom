@@ -254,7 +254,7 @@ function bindNotifications(pageId, page) {
                     return;
                 }
 
-                push([pageId, callbackName, arguments]);
+                push([pageId, callbackName, Array.prototype.slice.call(arguments)]);
             }
         });
 
