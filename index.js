@@ -128,6 +128,7 @@ function main(params, callback) {
                             case "open":
                             case "content":
                             case "cookies":
+                            case "scrollPosition":
                             case "renderBase64":
                                 onEndClientEvent(null, data);
 
@@ -278,6 +279,9 @@ function main(params, callback) {
                             },
                             cookies(data, callback) {
                                 return sendCommand([pageId, "cookies", data], callback);
+                            },
+                            scrollPosition(data, callback) {
+                                return sendCommand([pageId, "scrollPosition", data], callback);
                             }
                         };
                     }

@@ -212,6 +212,7 @@ gPage.onAlert = function onAlert(packet) {
 
         case "content":
         case "cookies":
+        case "scrollPosition":
             var data = payload[2];
 
             if(typeof(data) !== "undefined" && data !== null) {
