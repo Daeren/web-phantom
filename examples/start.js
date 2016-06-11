@@ -24,7 +24,7 @@ rCo(function* () {
 
     const status    = yield page.open("https://666.io");
 
-    yield sleep(1000 * 5);
+    yield sleep(1000 * 2);
 
     const content   = yield page.content();
 

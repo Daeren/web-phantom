@@ -39,6 +39,7 @@ function main(params, callback) {
     params          = params ? Object.create(params) : {};
     params.path     = params.path || "phantomjs";
     params.host     = params.host || "localhost";
+    params.port     = params.port || 46064;
     params.args     = params.args || {};
 
     if(typeof(callback) === "undefined") {

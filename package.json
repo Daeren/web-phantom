@@ -1,6 +1,6 @@
 {
     "name": "web-phantom",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "description": "Simple bridge between Node.js and PhantomJS",
 
     "homepage": "https://666.io",
